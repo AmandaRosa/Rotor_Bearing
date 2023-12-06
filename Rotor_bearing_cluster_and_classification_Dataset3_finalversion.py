@@ -211,58 +211,63 @@ if __name__ == '__main__':
 
         for i in range(0,3):
 
-            # Create a 1x2 subplot grid
-            fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+            for trial in range(1,4):
 
-            index1 = i
-            index2 = index1+3
+                # Create a 1x2 subplot grid
+                fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
 
-            # Extract features
-            x = features_list[:, index1]
-            y = features_list[:, index2]
-            label = features_list[:, -1]
+                index1 = i
+                index2 = index1+3
 
-            # Plot the first subplot (Actual Classes)
-            scatter1 = axs[0].scatter(x, y, c=label, cmap=ListedColormap(['red', 'green']))
-            axs[0].set_title('Actual Classes')
-            axs[0].set_xlabel(f'{parameters[index1]}')  # Add X axis label
-            axs[0].set_ylabel(f'{parameters[index2]}')  # Add Y axis label
-            classes = ['Unhealthy', 'Healthy']
+                # Extract features
+                x = features_list[:, index1]
+                y = features_list[:, index2]
+                label = features_list[:, -1]
 
-            # Create a custom legend
-            legend_elements1 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
-                                        markerfacecolor=['red', 'green'][i], markersize=10) for i in range(2)]
+                # Plot the first subplot (Actual Classes)
+                scatter1 = axs[0].scatter(x, y, c=label, cmap=ListedColormap(['red', 'green']))
+                axs[0].set_title('Actual Classes')
+                axs[0].set_xlabel(f'{parameters[index1]}')  # Add X axis label
+                axs[0].set_ylabel(f'{parameters[index2]}')  # Add Y axis label
+                classes = ['Unhealthy', 'Healthy']
 
-            # Add legend to the first subplot
-            axs[0].legend(handles=legend_elements1, loc='upper right')
+                # Create a custom legend
+                legend_elements1 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
+                                            markerfacecolor=['red', 'green'][i], markersize=10) for i in range(2)]
 
-            # Plot the second subplot (SOM Predictions)
-            scatter2 = axs[1].scatter(x, y, c=predictions, cmap=ListedColormap(['#ff7f0e', '#1f77b4']))
-            axs[1].set_title('SOM Predictions')
-            axs[1].set_xlabel(f'{parameters[index1]}')  # Add X axis label
-            axs[1].set_ylabel(f'{parameters[index2]}')  # Add Y axis label
-            classes = ['1', '2']
+                # Add legend to the first subplot
+                axs[0].legend(handles=legend_elements1, loc='upper right')
 
-            # Create a custom legend
-            legend_elements2 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
-                                        markerfacecolor=['#ff7f0e', '#1f77b4'][i], markersize=10) for i in range(2)]
+                # Plot the second subplot (SOM Predictions)
+                scatter2 = axs[1].scatter(x, y, c=predictions, cmap=ListedColormap(['#ff7f0e', '#1f77b4']))
+                axs[1].set_title('SOM Predictions')
+                axs[1].set_xlabel(f'{parameters[index1]}')  # Add X axis label
+                axs[1].set_ylabel(f'{parameters[index2]}')  # Add Y axis label
+                classes = ['1', '2']
 
-            # Add legend to the second subplot
-            axs[1].legend(handles=legend_elements2, loc='upper right')
+                # Create a custom legend
+                legend_elements2 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
+                                            markerfacecolor=['#ff7f0e', '#1f77b4'][i], markersize=10) for i in range(2)]
 
-            # Set a global title for the entire figure
-            fig.suptitle(f'Comparison of Actual Classes and SOM Predictions', fontsize=16)
+                # Add legend to the second subplot
+                axs[1].legend(handles=legend_elements2, loc='upper right')
 
-            # Add a subtitle below the subplots
-            # fig.text(0.5, 0.04, f'Feature: {functions}', ha='center', fontsize=12)
-            if predictions.shape == output_array.shape:
-                acc = np.where((predictions == 1) & (output_array == 1))[0]
-                acertos.append(np.where((predictions == 1) & (output_array == 1))[0])
-                print(acertos)
-                fig.text(0.5, 0.01, f'True Healthy: {len(acc)}', ha='center', fontsize=8)
+                # Set a global title for the entire figure
+                fig.suptitle(f'Comparison of Actual Classes and SOM Predictions', fontsize=16)
 
-            # Adjust layout for better spacing
-            plt.tight_layout()
+                # Add a subtitle below the subplots
+                # fig.text(0.5, 0.04, f'Feature: {functions}', ha='center', fontsize=12)
+                if predictions.shape == output_array.shape:
+                    ### ALTERAR PARA TRUE POSITIVE
+                    acc = np.where((predictions == 1) & (output_array == 1))[0]
+                    acertos.append(np.where((predictions == 1) & (output_array == 1))[0])
+                    ### SALVAR ACURÁCIA EM %
+                    fig.text(0.5, 0.01, f'True Healthy: {len(acc)}', ha='center', fontsize=8)
 
-            # Save the figure
-            plt.savefig(f'./Results/{new_directory}/image_{new_directory}_fig{i}.png')
+                # Adjust layout for better spacing
+                plt.tight_layout()
+
+                ### SALVAR NOME_TECNICAS_USADAS, TRUE POSITIVE E ACURARACIA EM UM DOCUMENTO TXT
+
+                # Save the figure
+                plt.savefig(f'./Results/{new_directory}/image_{new_directory}_fig{i}_trial__{trial}.png')
