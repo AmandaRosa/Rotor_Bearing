@@ -62,6 +62,8 @@ if __name__ == '__main__':
     df_classes =pd.read_csv(path_classes)
 
     print('LOADED DATASET!')
+    info = ''
+    np.savetxt('results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
 
     ids = ['experiment_id', 'bearing_1_id', 'bearing_2_id']
     np_ids = df_signals[ids].values
@@ -74,7 +76,7 @@ if __name__ == '__main__':
 
     timestamp = df_signals['timestamp'].values
 
-    acertos = []
+    results = []
 
     # Extracting columns for the second NumPy array
     parameters = ['a1_x', 'a1_y', 'a1_z', 'a2_x', 'a2_y', 'a2_z', 'rpm']
@@ -194,7 +196,7 @@ if __name__ == '__main__':
                     feature_rpm.append(rpm)
 
             
-                data_features.append([feature_a1_x, feature_a1_y, feature_a1_z, feature_a2_x, feature_a2_y, feature_a2_z, feature_rpm, [output_array[exp-1]]])
+            data_features.append([feature_a1_x, feature_a1_y, feature_a1_z, feature_a2_x, feature_a2_y, feature_a2_z, feature_rpm, [output_array[exp-1]]])
 
         features_list = list()
 
@@ -205,9 +207,9 @@ if __name__ == '__main__':
         features_list = np.array(features_list)
         dim_ = len(list_features_function[index])*7+1
 
-        iris_som = SOM(n=1,m=2,dim=dim_, max_iter=100000) 
-        iris_som.fit(features_list)
-        predictions = iris_som.predict(features_list)
+        som = SOM(n=1,m=2,dim=dim_, max_iter=100000) 
+        som.fit(features_list)
+        predictions = som.predict(features_list)
 
         for i in range(0,3):
 
@@ -256,18 +258,21 @@ if __name__ == '__main__':
                 fig.suptitle(f'Comparison of Actual Classes and SOM Predictions', fontsize=16)
 
                 # Add a subtitle below the subplots
-                # fig.text(0.5, 0.04, f'Feature: {functions}', ha='center', fontsize=12)
-                if predictions.shape == output_array.shape:
-                    ### ALTERAR PARA TRUE POSITIVE
-                    acc = np.where((predictions == 1) & (output_array == 1))[0]
-                    acertos.append(np.where((predictions == 1) & (output_array == 1))[0])
-                    ### SALVAR ACURÁCIA EM %
-                    fig.text(0.5, 0.01, f'True Healthy: {len(acc)}', ha='center', fontsize=8)
+                # fig.text(0.5, 0.04, f'Feature: {functions}', ha='center', fontsize=12
+                true_positive = np.where((predictions == 1) & (output_array == 1))[0]
+
+                acc = predictions == output_array
+                accuracy = np.mean(np.array(acc))*100
+                vector_info = f'{new_directory} | {len(true_positive)} | {accuracy} | {trial}\n'
+
+                ## LEGENDA
+                fig.text(0.5, 0.01, f'Acc: {accuracy} %', ha='center', fontsize=8)
+
+                with open('results.txt', 'a') as f:
+                    f.write(vector_info)
 
                 # Adjust layout for better spacing
                 plt.tight_layout()
-
-                ### SALVAR NOME_TECNICAS_USADAS, TRUE POSITIVE E ACURARACIA EM UM DOCUMENTO TXT
 
                 # Save the figure
                 plt.savefig(f'./Results/{new_directory}/image_{new_directory}_fig{i}_trial__{trial}.png')
