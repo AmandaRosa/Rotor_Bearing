@@ -113,9 +113,11 @@ if __name__ == '__main__':
     # Extract the unique rows
     output_array = np_ids[unique_indices][:][:,-1]
 
-    features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
-                     get_peak_acceleration, get_crest_factor, get_frequency_centre, get_mean_square_frequency,
-                     get_root_mean_square_frequency, get_root_variance_frequency]
+    # features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
+    #                  get_peak_acceleration, get_crest_factor, get_frequency_centre, get_mean_square_frequency,
+    #                  get_root_mean_square_frequency, get_root_variance_frequency]
+    
+    features_function = [get_skewness, get_kurtosis]
 
     list_features_function = []
 
@@ -149,8 +151,10 @@ if __name__ == '__main__':
         pass
 
     for index, combination in enumerate(list_features_function):
-        functions = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
-        new_directory = '_'.join(functions)
+        names_methods = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
+        functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
+        print(functions)
+        new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
         parent_dir = os.path.abspath('./Results/')
         path = os.path.join(parent_dir, new_directory)
         if not os.path.exists(path):
@@ -209,17 +213,20 @@ if __name__ == '__main__':
 
         som = SOM(n=1,m=2,dim=dim_, max_iter=100000) 
         som.fit(features_list)
-        predictions = som.predict(features_list)
 
-        for i in range(0,3):
+        index_methods = list(range(0,int((len(features_list[0]))/7)))
+
+        for i in range(0,3*len(index_methods)):   # X, Y e Z
 
             for trial in range(1,4):
+
+                predictions = som.predict(features_list)
 
                 # Create a 1x2 subplot grid
                 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
 
                 index1 = i
-                index2 = index1+3
+                index2 = index1+3*(len(index_methods))
 
                 # Extract features
                 x = features_list[:, index1]
@@ -229,8 +236,8 @@ if __name__ == '__main__':
                 # Plot the first subplot (Actual Classes)
                 scatter1 = axs[0].scatter(x, y, c=label, cmap=ListedColormap(['red', 'green']))
                 axs[0].set_title('Actual Classes')
-                axs[0].set_xlabel(f'{parameters[index1]}')  # Add X axis label
-                axs[0].set_ylabel(f'{parameters[index2]}')  # Add Y axis label
+                axs[0].set_xlabel(f'{parameters[index1%6]} - {functions[int(i/3)]}')  # Add X axis label
+                axs[0].set_ylabel(f'{parameters[index2%6]} - {functions[int(i/3)]}')  # Add Y axis label
                 classes = ['Unhealthy', 'Healthy']
 
                 # Create a custom legend
@@ -243,8 +250,8 @@ if __name__ == '__main__':
                 # Plot the second subplot (SOM Predictions)
                 scatter2 = axs[1].scatter(x, y, c=predictions, cmap=ListedColormap(['#ff7f0e', '#1f77b4']))
                 axs[1].set_title('SOM Predictions')
-                axs[1].set_xlabel(f'{parameters[index1]}')  # Add X axis label
-                axs[1].set_ylabel(f'{parameters[index2]}')  # Add Y axis label
+                axs[1].set_xlabel(f'{parameters[index1%6]} - {functions[int(i/3)]}')  # Add X axis label
+                axs[1].set_ylabel(f'{parameters[index2%6]} - {functions[int(i/3)]}')  # Add Y axis label
                 classes = ['1', '2']
 
                 # Create a custom legend
@@ -275,4 +282,4 @@ if __name__ == '__main__':
                 plt.tight_layout()
 
                 # Save the figure
-                plt.savefig(f'./Results/{new_directory}/image_{new_directory}_fig{i}_trial__{trial}.png')
+                plt.savefig(f'./Results/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')
