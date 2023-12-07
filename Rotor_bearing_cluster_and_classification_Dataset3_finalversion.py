@@ -113,11 +113,11 @@ if __name__ == '__main__':
     # Extract the unique rows
     output_array = np_ids[unique_indices][:][:,-1]
 
-    # features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
-    #                  get_peak_acceleration, get_crest_factor, get_frequency_centre, get_mean_square_frequency,
-    #                  get_root_mean_square_frequency, get_root_variance_frequency]
+    features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
+                     get_peak_acceleration, get_crest_factor, get_frequency_centre, get_mean_square_frequency,
+                     get_root_mean_square_frequency, get_root_variance_frequency]
     
-    features_function = [get_skewness, get_kurtosis]
+    # features_function = [get_skewness, get_kurtosis]
 
     list_features_function = []
 
@@ -136,7 +136,7 @@ if __name__ == '__main__':
     # Print all combinations with indices
 
     # Specify the directory path
-    new_directory = 'Results'
+    new_directory = 'Results_Dataset3'
     parent_dir = os.path.abspath('.')
     path = os.path.join(parent_dir, new_directory)
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
         print(functions)
         new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
-        parent_dir = os.path.abspath('./Results/')
+        parent_dir = os.path.abspath('./Results_Dataset3/')
         path = os.path.join(parent_dir, new_directory)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -212,7 +212,6 @@ if __name__ == '__main__':
         dim_ = len(list_features_function[index])*7+1
 
         som = SOM(n=1,m=2,dim=dim_, max_iter=100000) 
-        som.fit(features_list)
 
         index_methods = list(range(0,int((len(features_list[0]))/7)))
 
@@ -220,6 +219,7 @@ if __name__ == '__main__':
 
             for trial in range(1,4):
 
+                som.fit(features_list)
                 predictions = som.predict(features_list)
 
                 # Create a 1x2 subplot grid
@@ -282,4 +282,4 @@ if __name__ == '__main__':
                 plt.tight_layout()
 
                 # Save the figure
-                plt.savefig(f'./Results/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')
+                plt.savefig(f'./Results_Dataset3/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')
