@@ -39,7 +39,7 @@ def get_crest_factor(signal):
     return get_peak_acceleration(signal)/get_rms_acceleration(signal)
 
 def get_frequency_centre(signal):
-    return ((signal.diff()*signal).sum()) / (2 * np.pi * np.sum(signal**2))
+    return ((np.diff(signal)*signal).sum()) / (2 * np.pi * np.sum(signal**2))
 
 def get_mean_square_frequency(signal):
     return  np.sum(signal.diff()**2) / (4 * np.pi**2 * np.sum(signal**2))
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     print('LOADED DATASET!')
     info = ''
-    np.savetxt('results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
+    np.savetxt('./Results_Dataset3/results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
 
     ids = ['experiment_id', 'bearing_1_id', 'bearing_2_id']
     np_ids = df_signals[ids].values
@@ -172,6 +172,7 @@ if __name__ == '__main__':
             feature_a2_y = []
             feature_a2_z = []
             feature_rpm = []
+
             for func in combination:
                 a1_x = func(experiment['a1_x'])
                 a1_y = func(experiment['a1_y'])
@@ -270,12 +271,12 @@ if __name__ == '__main__':
 
                 acc = predictions == output_array
                 accuracy = np.mean(np.array(acc))*100
-                vector_info = f'{new_directory} | {len(true_positive)} | {accuracy} | {trial}\n'
+                vector_info = f'{new_directory} | {len(true_positive)} | {accuracy:.2f} | {trial}\n'
 
                 ## LEGENDA
-                fig.text(0.5, 0.01, f'Acc: {accuracy} %', ha='center', fontsize=8)
+                fig.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
 
-                with open('results.txt', 'a') as f:
+                with open('./Results_Dataset3/results.txt', 'a') as f:
                     f.write(vector_info)
 
                 # Adjust layout for better spacing
