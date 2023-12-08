@@ -17,6 +17,15 @@ from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import re
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import StandardScaler, label_binarize
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
 
 def get_skewness(signal):
     return skew(signal)
@@ -75,7 +84,7 @@ if __name__ == '__main__':
     except: 
         pass
     info = ''
-    np.savetxt('./Results_Dataset11/MLP/results.txt',[info], fmt='%s', header=' Methods            Accuracy(%)            Trial ')  
+    np.savetxt('./Results_Dataset11/MLP/results.txt',[info], fmt='%s', header=' Methods         Accuracy(%)            Trial ')  
     
     letters = ['H', 'I', 'O'] # 0-healthy, I-inner fault, O-outer fault
     speeds = ['A', 'B', 'C', 'D']
@@ -161,10 +170,6 @@ if __name__ == '__main__':
 
         features_list = np.array(features_list)
 
-        dim_ = len(list_features_function[index])+1
-
-        som = SOM(n=1,m=3,dim=dim_, max_iter=100000) 
-
         index_methods = list(range(0,int(len(features_list[0]))-1))
 
         X = features_list[:,0:len(index_methods)]
@@ -175,49 +180,141 @@ if __name__ == '__main__':
             for trial in range(1,6):
 
                 # Create a 1x2 subplot grid
-                fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+                fig1, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
 
                 index1 = i
+                test_size = 0.4
 
-                # Extract features
-                x = list(range(0,36))
-                y = features_list[:, index1]
-                label = features_list[:, -1]
-
-                # Plot the first subplot (Actual Classes)
-                scatter1 = axs[0].scatter(x, y, c=label, cmap=ListedColormap(['green', 'brown', 'black']))
-                axs[0].set_title('Actual Classes')
-                axs[0].set_xlabel(f'experiment')  # Add X axis label
-                axs[0].set_ylabel(f'accelerometer - {functions[i]}')  # Add Y axis label
-                classes = ['Healthy', 'Unhealthy 1', 'Unhealthy 2']
-
-                # Create a custom legend
-                legend_elements1 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
-                                            markerfacecolor=['green', 'brown', 'black'][i], markersize=10) for i in range(3)]
-
-                # Add legend to the first subplot
-                axs[0].legend(handles=legend_elements1, loc='best')
-
-                X = features_list[:,0:len(index_methods)]
-                y = features_list[:,-1]
+                X = features_list[:, 0:len(index_methods)]
+                y = features_list[:, -1]
 
                 ### MLP aqui
+                # Standardize the features (important for neural networks)
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
 
+                # Create an MLP classifier
+                mlp_classifier = MLPClassifier(hidden_layer_sizes=(10, 30, 30, 10), max_iter=10000, random_state=42)
 
-                # Set a global title for the entire figure
-                fig.suptitle(f'Comparison of Actual Classes and MLP Classification', fontsize=16)
+                # Split the data into training and testing sets
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
-                # Add a subtitle below the subplots
-                fig.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
+                # Use k-fold cross-validation
+                kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-                # Adjust layout for better spacing
-                plt.tight_layout()
+                # Lists to store evaluation results
+                test_accuracies = []
+                test_classification_reps = []
+                conf_matrices = []
+                roc_aucs = []
 
+                for train_index, test_index in kf.split(X_train):
+                    X_train_fold, X_val_fold = X_train[train_index], X_train[test_index]
+                    y_train_fold, y_val_fold = y_train[train_index], y_train[test_index]
+
+                    # Fit the classifier to the training data
+                    mlp_classifier.fit(X_train_fold, y_train_fold)
+
+                    # Make predictions on the testing data
+                    y_test_pred_fold = mlp_classifier.predict(X_test)
+
+                    # Evaluate the model on the testing set
+                    test_accuracy_fold = accuracy_score(y_test, y_test_pred_fold)
+                    test_classification_rep_fold = classification_report(y_test, y_test_pred_fold)
+                    test_accuracies.append(test_accuracy_fold)
+                    test_classification_reps.append(test_classification_rep_fold)
+
+                    # Plot Confusion Matrix for Validation Set
+                    conf_matrix_test_fold = confusion_matrix(y_test, y_test_pred_fold)
+                    conf_matrices.append(conf_matrix_test_fold)
+
+                    # Convert labels to binary format for the ROC curve
+                    y_test_bin_fold = label_binarize(y_test, classes=np.unique(y))
+
+                    # Create a OneVsRestClassifier for ROC curve
+                    classifier_ovr_fold = OneVsRestClassifier(mlp_classifier)
+                    y_test_score_fold = classifier_ovr_fold.fit(X_train_fold, y_train_fold).predict_proba(X_test)
+                
+                accuracy = np.mean(test_accuracies)*100
+
+                vector_info = f'{new_directory} | {accuracy:.2f} | {trial}\n'
 
                 with open('./Results_Dataset11/MLP/results.txt', 'a') as f:
                     f.write(vector_info)
 
-                # Save the figure
-                plt.savefig(f'./Results_Dataset11/MLP/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
+                # Plot normalized Confusion Matrix for Validation Set
+                conf_matrix_avg = np.mean(conf_matrices, axis=0)
+                conf_matrix_test_normalized = conf_matrix_avg / conf_matrix_avg.sum(axis=1, keepdims=True)
+                plt.figure(figsize=(8, 6))
+                plt.imshow(conf_matrix_test_normalized, interpolation='nearest', cmap=plt.cm.Blues, vmin=0, vmax=1)
+                
+                # Set a global title for the entire figure
+                fig1.suptitle(f'Confusion Matrix', fontsize=16)
 
+                # Add a subtitle below the subplots
+                fig1.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
+                plt.colorbar()
+
+                classes = list(set(y))
+                tick_marks = np.arange(len(classes))
+                plt.xticks(tick_marks, classes, rotation=45)
+                plt.yticks(tick_marks, classes)
+
+                plt.xlabel('Predicted Label')
+                plt.ylabel('True Label')
+
+                for row in range(len(classes)):
+                    for j in range(len(classes)):
+                        plt.text(j, row, f"{conf_matrix_test_normalized[row, j]*100:.2f}%", ha='center', va='center')
+
+                # Save the figure
+                plt.savefig(f'./Results_Dataset11/MLP/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}_CM.png')
+
+                fig2, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+                
+                # Extract features
+                y = X_test[:, index1]
+                x = list(range(0,len(y)))
+                label = features_list[:, -1]
+
+                # Plot the first subplot (Actual Classes)
+                scatter1 = axs[0].scatter(x, y, c=y_test, cmap=ListedColormap(['green', 'red', 'black']))
+                axs[0].set_title('Actual Classes')
+                axs[0].set_xlabel(f'random experiment')  # Add X axis label
+                axs[0].set_ylabel(f'accelerometer')  # Add Y axis label
+                classes = ['Healthy', 'Unhealthy 1', 'Unhealthy 2']
+
+                # Create a custom legend
+                legend_elements1 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
+                                            markerfacecolor=['green', 'red', 'black'][i], markersize=10) for i in range(3)]
+
+                # Add legend to the first subplot
+                axs[0].legend(handles=legend_elements1, loc='best')
+
+                # Plot the second subplot (SOM Predictions)
+                scatter2 = axs[1].scatter(x, y, c=y_test_pred_fold, cmap=ListedColormap(['yellow', 'blue', 'black']))
+                axs[1].set_title('MLP Classification')
+                axs[1].set_xlabel(f'random experiment')  # Add X axis label
+                axs[1].set_ylabel(f'accelerometer')  # Add Y axis label
+                classes = ['1', '2', '3']
+
+                # Create a custom legend
+                legend_elements2 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
+                                            markerfacecolor=['yellow', 'blue', 'black'][i], markersize=10) for i in range(3)]
+
+                # Add legend to the second subplot
+                axs[1].legend(handles=legend_elements2, loc='best')
+
+                # Set a global title for the entire figure
+                fig2.suptitle(f'Comparison of Actual Classes and MLP Classification', fontsize=16)
+
+                # Add a subtitle below the subplots
+                fig2.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
+
+                # Adjust layout for better spacing
+                plt.tight_layout()
+
+                # Save the figure
+                plt.savefig(f'./Results_Dataset11/MLP/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}_markers.png')
+                
 

@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy
@@ -7,16 +6,24 @@ from scipy.stats import skew
 from scipy.stats import kurtosis
 import statistics
 from itertools import combinations
-from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.preprocessing import StandardScaler
 import os
 from sklearn_som.som import SOM
 from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import re
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
+from sklearn.model_selection import StratifiedKFold
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, confusion_matrix
+import seaborn as sns
+
 
 def get_skewness(signal):
     return skew(signal)
@@ -75,7 +82,7 @@ if __name__ == '__main__':
     except: 
         pass
     info = ''
-    np.savetxt('./Results_Dataset11/SVM/results.txt',[info], fmt='%s', header=' Methods            Accuracy(%)            Trial ')  
+    np.savetxt('./Results_Dataset11/SVM/results.txt',[info], fmt='%s', header=' Methods         Accuracy(%)            Trial ')  
     
     letters = ['H', 'I', 'O'] # 0-healthy, I-inner fault, O-outer fault
     speeds = ['A', 'B', 'C', 'D']
@@ -161,10 +168,6 @@ if __name__ == '__main__':
 
         features_list = np.array(features_list)
 
-        dim_ = len(list_features_function[index])+1
-
-        som = SOM(n=1,m=3,dim=dim_, max_iter=100000) 
-
         index_methods = list(range(0,int(len(features_list[0]))-1))
 
         X = features_list[:,0:len(index_methods)]
@@ -175,45 +178,102 @@ if __name__ == '__main__':
             for trial in range(1,6):
 
                 # Create a 1x2 subplot grid
-                fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+                fig1, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 5))
 
                 index1 = i
 
-                # Extract features
-                x = list(range(0,36))
-                y = features_list[:, index1]
-                label = features_list[:, -1]
+                X = features_list[:, 0:len(index_methods)]
+                y = features_list[:, -1]
 
-                matches = [label == pred for label, pred in zip(label, predictions)]
-                accuracy = np.mean(np.array(matches))*100
+                # SVM aqui
+                # Split the data into training and testing sets
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+                # Create an SVM model
+                svm_model = SVC(kernel='linear', max_iter=10000)
+
+                # Perform k-fold cross-validation
+                kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+                cv_scores = cross_val_score(svm_model, X_train, y_train, cv=kfold, scoring='accuracy')
+
+                # Train the model on the entire training data
+                svm_model.fit(X_train, y_train)
+
+                # Make predictions on the test data
+                y_pred = svm_model.predict(X_test)
+
+                # Calculate accuracy on the test set
+                accuracy = accuracy_score(y_test, y_pred)*100
+
                 vector_info = f'{new_directory} | {accuracy:.2f} | {trial}\n'
-
-                # Plot the first subplot (Actual Classes)
-                scatter1 = axs[0].scatter(x, y, c=label, cmap=ListedColormap(['green', 'brown', 'black']))
-                axs[0].set_title('Actual Classes')
-                axs[0].set_xlabel(f'experiment')  # Add X axis label
-                axs[0].set_ylabel(f'accelerometer - {functions[i]}')  # Add Y axis label
-                classes = ['Healthy', 'Unhealthy 1', 'Unhealthy 2']
-
-                # Create a custom legend
-                legend_elements1 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
-                                            markerfacecolor=['green', 'brown', 'black'][i], markersize=10) for i in range(3)]
-
-                # Add legend to the first subplot
-                axs[0].legend(handles=legend_elements1, loc='best')
-
-                ### SVM aqui
-
-                # Add a subtitle below the subplots
-                fig.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
-
-                # Adjust layout for better spacing
-                plt.tight_layout()
 
                 with open('./Results_Dataset11/SVM/results.txt', 'a') as f:
                     f.write(vector_info)
 
-                # Save the figure
-                plt.savefig(f'./Results_Dataset11/SVM/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
+                # Plot the confusion matrix with accuracy percentages and colorbar
+                plt.figure(figsize=(8, 6))
+                conf_matrix = confusion_matrix(y_test, y_pred)
+                plt.imshow(conf_matrix, interpolation='nearest', cmap=plt.cm.Blues, vmin=0, vmax=1)
+                conf_matrix_percentage = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis] * 100
+                sns.heatmap(conf_matrix_percentage, annot=True, fmt='.2f', cmap='Blues', cbar=True,
+                xticklabels=np.unique(y), yticklabels=np.unique(y))
+                plt.xlabel('Predicted Label')
+                plt.ylabel('True Label')
+                
+                # Set a global title for the entire figure
+                fig1.suptitle(f'Confusion Matrix', fontsize=16)
 
+                # Add a subtitle below the subplots
+                fig1.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
+
+                # Save the figure
+                plt.savefig(f'./Results_Dataset11/SVM/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}_CM.png')
+
+                fig2, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+                
+                # Extract features
+                y = X_test[:, index1]
+                x = list(range(0,len(y)))
+                label = features_list[:, -1]
+
+                # Plot the first subplot (Actual Classes)
+                scatter1 = axs[0].scatter(x, y, c=y_test, cmap=ListedColormap(['green', 'red', 'black']))
+                axs[0].set_title('Actual Classes')
+                axs[0].set_xlabel(f'random experiment')  # Add X axis label
+                axs[0].set_ylabel(f'accelerometer')  # Add Y axis label
+                classes = ['Healthy', 'Unhealthy 1', 'Unhealthy 2']
+
+                # Create a custom legend
+                legend_elements1 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
+                                            markerfacecolor=['green', 'red', 'black'][i], markersize=10) for i in range(3)]
+
+                # Add legend to the first subplot
+                axs[0].legend(handles=legend_elements1, loc='best')
+
+                # Plot the second subplot (SOM Predictions)
+                scatter2 = axs[1].scatter(x, y, c=y_pred, cmap=ListedColormap(['yellow', 'blue', 'black']))
+                axs[1].set_title('SVM Classification')
+                axs[1].set_xlabel(f'random experiment')  # Add X axis label
+                axs[1].set_ylabel(f'accelerometer')  # Add Y axis label
+                classes = ['1', '2', '3']
+
+                # Create a custom legend
+                legend_elements2 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
+                                            markerfacecolor=['yellow', 'blue', 'black'][i], markersize=10) for i in range(3)]
+
+                # Add legend to the second subplot
+                axs[1].legend(handles=legend_elements2, loc='best')
+
+                # Set a global title for the entire figure
+                fig2.suptitle(f'Comparison of Actual Classes and SVM Classification', fontsize=16)
+
+                # Add a subtitle below the subplots
+                fig2.text(0.5, 0.02, f'Acc: {accuracy:.2f} %', ha='center', fontsize=12)
+
+                # Adjust layout for better spacing
+                plt.tight_layout()
+
+                # Save the figure
+                plt.savefig(f'./Results_Dataset11/SVM/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}_markers.png')
+                
 
