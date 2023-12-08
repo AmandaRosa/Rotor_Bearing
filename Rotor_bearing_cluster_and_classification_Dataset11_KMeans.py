@@ -45,10 +45,10 @@ def get_crest_factor(signal):
     return get_peak_acceleration(signal)/get_rms_acceleration(signal)
 
 def get_frequency_centre(signal):
-    return ((signal.diff()*signal).sum()) / (2 * np.pi * np.sum(signal**2))
+    return ((np.diff(signal)*signal[:-1]) / (2 * np.pi * np.sum(signal**2)))
 
 def get_mean_square_frequency(signal):
-    return  np.sum(signal.diff()**2) / (4 * np.pi**2 * np.sum(signal**2))
+    return  np.sum(np.diff(signal)**2) / (4 * np.pi**2 * np.sum(signal**2))
 
 def get_root_mean_square_frequency(signal):
     return  np.sqrt(get_mean_square_frequency(signal))
@@ -104,10 +104,10 @@ if __name__ == '__main__':
         y.append(i[1])
 
     features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
-                    get_peak_acceleration, get_crest_factor, get_frequency_centre, get_mean_square_frequency,
+                    get_peak_acceleration, get_crest_factor, get_mean_square_frequency,
                     get_root_mean_square_frequency, get_root_variance_frequency]
     
-    # features_function = [get_skewness, get_kurtosis]
+    # features_function = [get_frequency_centre]
 
     list_features_function = []
 
@@ -234,15 +234,4 @@ if __name__ == '__main__':
                 # Save the figure
                 plt.savefig(f'./Results_Dataset11/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
 
-                ### INSERIR MLP
-                ### Validação K-fold
-                #### matriz de confusão
-                #### acurácia
-                #### ROC
-
-                ### INSERIR SVM
-                ### Validação K-fold
-                #### matriz de confusão
-                #### acurácia
-                #### ROC
 

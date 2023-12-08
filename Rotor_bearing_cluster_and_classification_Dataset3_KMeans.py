@@ -42,7 +42,7 @@ def get_frequency_centre(signal):
     return ((np.diff(signal)*signal).sum()) / (2 * np.pi * np.sum(signal**2))
 
 def get_mean_square_frequency(signal):
-    return  np.sum(signal.diff()**2) / (4 * np.pi**2 * np.sum(signal**2))
+    return  np.sum(np.diff(signal)**2) / (4 * np.pi**2 * np.sum(signal**2))
 
 def get_root_mean_square_frequency(signal):
     return  np.sqrt(get_mean_square_frequency(signal))
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     output_array = np_ids[unique_indices][:][:,-1]
 
     features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
-                     get_peak_acceleration, get_crest_factor, get_frequency_centre, get_mean_square_frequency,
+                     get_peak_acceleration, get_crest_factor, get_mean_square_frequency,
                      get_root_mean_square_frequency, get_root_variance_frequency]
     
     # features_function = [get_skewness, get_kurtosis]
@@ -153,7 +153,6 @@ if __name__ == '__main__':
     for index, combination in enumerate(list_features_function):
         names_methods = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
         functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
-        print(functions)
         new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
         parent_dir = os.path.abspath('./Results_Dataset3/')
         path = os.path.join(parent_dir, new_directory)
