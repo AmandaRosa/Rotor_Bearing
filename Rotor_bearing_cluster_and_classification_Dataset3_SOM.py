@@ -55,6 +55,21 @@ def get_root_variance_frequency(signal):
 
 if __name__ == '__main__':
 
+    # Specify the directory path
+    new_directory = 'Results_Dataset3/SOM'
+    parent_dir = os.path.abspath('.')
+    path = os.path.join(parent_dir, new_directory)
+
+    # Create the directory if it doesn't exist
+    try:
+        if not os.path.exists(new_directory):
+            os.makedirs(path)
+            print(f"Directory '{new_directory}' created successfully.")
+        else:
+            print(f"Directory '{new_directory}' already exists.")
+    except: 
+        pass
+
     path_signals = '../../Dados/Rotor_Bearing/Dataset3/bearing_signals/bearing_signals.csv'
     df_signals =pd.read_csv(path_signals)
 
@@ -63,7 +78,7 @@ if __name__ == '__main__':
 
     print('LOADED DATASET!')
     info = ''
-    np.savetxt('./Results_Dataset3/results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
+    np.savetxt('./Results_Dataset3/SOM/results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
 
     ids = ['experiment_id', 'bearing_1_id', 'bearing_2_id']
     np_ids = df_signals[ids].values
@@ -115,7 +130,7 @@ if __name__ == '__main__':
 
     features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
                      get_peak_acceleration, get_crest_factor, get_mean_square_frequency,
-                     get_root_mean_square_frequency, get_root_variance_frequency]
+                     get_root_mean_square_frequency]
     
     # features_function = [get_skewness, get_kurtosis]
 
@@ -135,26 +150,11 @@ if __name__ == '__main__':
     # Print all combinations
     # Print all combinations with indices
 
-    # Specify the directory path
-    new_directory = 'Results_Dataset3'
-    parent_dir = os.path.abspath('.')
-    path = os.path.join(parent_dir, new_directory)
-
-    # Create the directory if it doesn't exist
-    try:
-        if not os.path.exists(new_directory):
-            os.makedirs(path)
-            print(f"Directory '{new_directory}' created successfully.")
-        else:
-            print(f"Directory '{new_directory}' already exists.")
-    except: 
-        pass
-
     for index, combination in enumerate(list_features_function):
         names_methods = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
         functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
         new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
-        parent_dir = os.path.abspath('./Results_Dataset3/')
+        parent_dir = os.path.abspath('./Results_Dataset3/SOM/')
         path = os.path.join(parent_dir, new_directory)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -275,11 +275,11 @@ if __name__ == '__main__':
                 ## LEGENDA
                 fig.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
 
-                with open('./Results_Dataset3/results.txt', 'a') as f:
+                with open('./Results_Dataset3/SOM/results.txt', 'a') as f:
                     f.write(vector_info)
 
                 # Adjust layout for better spacing
                 plt.tight_layout()
 
                 # Save the figure
-                plt.savefig(f'./Results_Dataset3/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')
+                plt.savefig(f'./Results_Dataset3/SOM/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')

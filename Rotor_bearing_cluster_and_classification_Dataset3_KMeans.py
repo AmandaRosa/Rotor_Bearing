@@ -11,6 +11,15 @@ from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import os
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
 
 def get_skewness(signal):
     return skew(signal)
@@ -55,6 +64,21 @@ def get_root_variance_frequency(signal):
 
 if __name__ == '__main__':
 
+    # Specify the directory path
+    new_directory = 'Results_Dataset3/KMEANS'
+    parent_dir = os.path.abspath('.')
+    path = os.path.join(parent_dir, new_directory)
+
+    # Create the directory if it doesn't exist
+    try:
+        if not os.path.exists(new_directory):
+            os.makedirs(path)
+            print(f"Directory '{new_directory}' created successfully.")
+        else:
+            print(f"Directory '{new_directory}' already exists.")
+    except: 
+        pass
+
     path_signals = '../../Dados/Rotor_Bearing/Dataset3/bearing_signals/bearing_signals.csv'
     df_signals =pd.read_csv(path_signals)
 
@@ -63,7 +87,7 @@ if __name__ == '__main__':
 
     print('LOADED DATASET!')
     info = ''
-    np.savetxt('./Results_Dataset3/results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
+    np.savetxt('./Results_Dataset3/KMEANS/results.txt',[info], fmt='%s', header='     Methods               True Positive          Accuracy(%)            Trial')
 
     ids = ['experiment_id', 'bearing_1_id', 'bearing_2_id']
     np_ids = df_signals[ids].values
@@ -115,7 +139,7 @@ if __name__ == '__main__':
 
     features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
                      get_peak_acceleration, get_crest_factor, get_mean_square_frequency,
-                     get_root_mean_square_frequency, get_root_variance_frequency]
+                     get_root_mean_square_frequency]
     
     # features_function = [get_skewness, get_kurtosis]
 
@@ -135,26 +159,11 @@ if __name__ == '__main__':
     # Print all combinations
     # Print all combinations with indices
 
-    # Specify the directory path
-    new_directory = 'Results_Dataset3'
-    parent_dir = os.path.abspath('.')
-    path = os.path.join(parent_dir, new_directory)
-
-    # Create the directory if it doesn't exist
-    try:
-        if not os.path.exists(new_directory):
-            os.makedirs(path)
-            print(f"Directory '{new_directory}' created successfully.")
-        else:
-            print(f"Directory '{new_directory}' already exists.")
-    except: 
-        pass
-
     for index, combination in enumerate(list_features_function):
         names_methods = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
         functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
         new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
-        parent_dir = os.path.abspath('./Results_Dataset3/')
+        parent_dir = os.path.abspath('./Results_Dataset3/KMEANS/')
         path = os.path.join(parent_dir, new_directory)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -209,18 +218,11 @@ if __name__ == '__main__':
             features_list.append(y)
 
         features_list = np.array(features_list)
-        dim_ = len(list_features_function[index])*7+1
-
-        som = SOM(n=1,m=2,dim=dim_, max_iter=100000) 
-
         index_methods = list(range(0,int((len(features_list[0]))/7)))
 
         for i in range(0,3*len(index_methods)):   # X, Y e Z
 
             for trial in range(1,4):
-
-                som.fit(features_list)
-                predictions = som.predict(features_list)
 
                 # Create a 1x2 subplot grid
                 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
@@ -247,22 +249,38 @@ if __name__ == '__main__':
                 # Add legend to the first subplot
                 axs[0].legend(handles=legend_elements1, loc='upper right')
 
-                # Plot the second subplot (SOM Predictions)
-                scatter2 = axs[1].scatter(x, y, c=predictions, cmap=ListedColormap(['#ff7f0e', '#1f77b4']))
-                axs[1].set_title('SOM Predictions')
+                X = features_list[:, 0:len(index_methods)*7]
+
+                # Apply K-Means clustering
+                kmeans = KMeans(n_clusters=2, max_iter=100000)
+                kmeans.fit(X)
+                y_kmeans = kmeans.predict(X)
+
+                coolwarm_cmap = LinearSegmentedColormap.from_list('CoolWarm', ['blue', 'yellow'])
+
+                # Visualize the results
+                axs[1].scatter(x, y, c=y_kmeans, cmap=coolwarm_cmap)
+                centers = kmeans.cluster_centers_
+                print(centers)
+                print(centers.shape)
+                axs[1].scatter(centers[:, 0], centers[:, 1], marker='X', s=200, color='red')
+
+                axs[1].set_title('K-Means Clustering')
                 axs[1].set_xlabel(f'{parameters[index1%6]} - {functions[int(i/3)]}')  # Add X axis label
                 axs[1].set_ylabel(f'{parameters[index2%6]} - {functions[int(i/3)]}')  # Add Y axis label
                 classes = ['1', '2']
 
                 # Create a custom legend
                 legend_elements2 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
-                                            markerfacecolor=['#ff7f0e', '#1f77b4'][i], markersize=10) for i in range(2)]
+                                            markerfacecolor=coolwarm_cmap(i / (len(classes) - 1)), markersize=10) for i in range(2)]
 
                 # Add legend to the second subplot
                 axs[1].legend(handles=legend_elements2, loc='upper right')
 
                 # Set a global title for the entire figure
-                fig.suptitle(f'Comparison of Actual Classes and SOM Predictions', fontsize=16)
+                fig.suptitle(f'Comparison of Actual Classes and K-Means Clustering', fontsize=16)
+
+                predictions = y_kmeans
 
                 # Add a subtitle below the subplots
                 # fig.text(0.5, 0.04, f'Feature: {functions}', ha='center', fontsize=12
@@ -275,11 +293,11 @@ if __name__ == '__main__':
                 ## LEGENDA
                 fig.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
 
-                with open('./Results_Dataset3/results.txt', 'a') as f:
+                with open('./Results_Dataset3/KMEANS/results.txt', 'a') as f:
                     f.write(vector_info)
 
                 # Adjust layout for better spacing
                 plt.tight_layout()
 
                 # Save the figure
-                plt.savefig(f'./Results_Dataset3/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')
+                plt.savefig(f'./Results_Dataset3/KMEANS/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[int(i/3)]}.png')

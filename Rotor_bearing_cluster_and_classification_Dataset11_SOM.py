@@ -61,7 +61,7 @@ def get_root_variance_frequency(signal):
 if __name__ == '__main__':
     
     # Specify the directory path
-    new_directory = 'Results_Dataset11'
+    new_directory = 'Results_Dataset11/SOM'
     parent_dir = os.path.abspath('.')
     path = os.path.join(parent_dir, new_directory)
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     except: 
         pass
     info = ''
-    np.savetxt('./Results_Dataset11/results.txt',[info], fmt='%s', header=' Methods            Accuracy(%)            Trial ')  
+    np.savetxt('./Results_Dataset11/SOM/results.txt',[info], fmt='%s', header=' Methods            Accuracy(%)            Trial ')  
     
     letters = ['H', 'I', 'O'] # 0-healthy, I-inner fault, O-outer fault
     speeds = ['A', 'B', 'C', 'D']
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
                     get_peak_acceleration, get_crest_factor, get_mean_square_frequency,
-                    get_root_mean_square_frequency, get_root_variance_frequency]
+                    get_root_mean_square_frequency]
     
     # features_function = [get_frequency_centre]
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
         names_methods = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
         functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
         new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
-        parent_dir = os.path.abspath('./Results_Dataset11/')
+        parent_dir = os.path.abspath('./Results_Dataset11/SOM/')
         path = os.path.join(parent_dir, new_directory)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -161,18 +161,18 @@ if __name__ == '__main__':
 
         features_list = np.array(features_list)
 
-        X = features_list[:,0:2]
-        y = features_list[:,-1]
-
         dim_ = len(list_features_function[index])+1
 
         som = SOM(n=1,m=3,dim=dim_, max_iter=100000) 
 
         index_methods = list(range(0,int(len(features_list[0]))-1))
 
+        X = features_list[:,0:len(index_methods)]
+        y = features_list[:,-1]
+
         for i in range(0,len(index_methods)):   # X, Y e Z
 
-            for trial in range(1,4):
+            for trial in range(1,6):
 
                 som.fit(features_list)
                 predictions = som.predict(features_list)
@@ -228,10 +228,10 @@ if __name__ == '__main__':
                 # Adjust layout for better spacing
                 plt.tight_layout()
 
-                with open('./Results_Dataset11/results.txt', 'a') as f:
+                with open('./Results_Dataset11/SOM/results.txt', 'a') as f:
                     f.write(vector_info)
 
                 # Save the figure
-                plt.savefig(f'./Results_Dataset11/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
+                plt.savefig(f'./Results_Dataset11/SOM/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
 
 

@@ -17,6 +17,12 @@ from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import re
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 def get_skewness(signal):
     return skew(signal)
@@ -61,7 +67,7 @@ def get_root_variance_frequency(signal):
 if __name__ == '__main__':
     
     # Specify the directory path
-    new_directory = 'Results_Dataset11'
+    new_directory = 'Results_Dataset11/KMEANS'
     parent_dir = os.path.abspath('.')
     path = os.path.join(parent_dir, new_directory)
 
@@ -75,7 +81,7 @@ if __name__ == '__main__':
     except: 
         pass
     info = ''
-    np.savetxt('./Results_Dataset11/results.txt',[info], fmt='%s', header=' Methods            Accuracy(%)            Trial ')  
+    np.savetxt('./Results_Dataset11/KMEANS/results.txt',[info], fmt='%s', header=' Methods            Accuracy(%)            Trial ')  
     
     letters = ['H', 'I', 'O'] # 0-healthy, I-inner fault, O-outer fault
     speeds = ['A', 'B', 'C', 'D']
@@ -105,7 +111,7 @@ if __name__ == '__main__':
 
     features_function = [get_skewness, get_kurtosis, get_shape_factor, get_variance, get_std, get_rms_acceleration,
                     get_peak_acceleration, get_crest_factor, get_mean_square_frequency,
-                    get_root_mean_square_frequency, get_root_variance_frequency]
+                    get_root_mean_square_frequency]
     
     # features_function = [get_frequency_centre]
 
@@ -128,7 +134,7 @@ if __name__ == '__main__':
         names_methods = [re.search(r'function (.*?) at', str(item)).group(1) for item in combination]
         functions = [method.split('_')[1::] for method in names_methods if method.startswith('get_')]
         new_directory = '_'.join('_'.join(inner_list) for inner_list in functions)
-        parent_dir = os.path.abspath('./Results_Dataset11/')
+        parent_dir = os.path.abspath('./Results_Dataset11/KMEANS/')
         path = os.path.join(parent_dir, new_directory)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -161,21 +167,18 @@ if __name__ == '__main__':
 
         features_list = np.array(features_list)
 
-        X = features_list[:,0:2]
-        y = features_list[:,-1]
-
         dim_ = len(list_features_function[index])+1
 
         som = SOM(n=1,m=3,dim=dim_, max_iter=100000) 
 
         index_methods = list(range(0,int(len(features_list[0]))-1))
 
+        X = features_list[:,0:len(index_methods)]
+        y = features_list[:,-1]
+
         for i in range(0,len(index_methods)):   # X, Y e Z
 
             for trial in range(1,4):
-
-                som.fit(features_list)
-                predictions = som.predict(features_list)
 
                 # Create a 1x2 subplot grid
                 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
@@ -186,10 +189,6 @@ if __name__ == '__main__':
                 x = list(range(0,36))
                 y = features_list[:, index1]
                 label = features_list[:, -1]
-
-                matches = [label == pred for label, pred in zip(label, predictions)]
-                accuracy = np.mean(np.array(matches))*100
-                vector_info = f'{new_directory} | {accuracy:.2f} | {trial}\n'
 
                 # Plot the first subplot (Actual Classes)
                 scatter1 = axs[0].scatter(x, y, c=label, cmap=ListedColormap(['green', 'brown', 'black']))
@@ -205,22 +204,42 @@ if __name__ == '__main__':
                 # Add legend to the first subplot
                 axs[0].legend(handles=legend_elements1, loc='best')
 
-                # Plot the second subplot (SOM Predictions)
-                scatter2 = axs[1].scatter(x, y, c=predictions, cmap=ListedColormap(['red', 'brown', 'black']))
-                axs[1].set_title('SOM Predictions')
+                X = features_list[:, 0:len(index_methods)*1]
+
+                # Apply K-Means clustering
+                kmeans = KMeans(n_clusters=3, max_iter=100000)
+                kmeans.fit(X)
+                y_kmeans = kmeans.predict(X)
+
+                predictions = y_kmeans
+
+                matches = [label == pred for label, pred in zip(label, predictions)]
+                accuracy = np.mean(np.array(matches))*100
+                vector_info = f'{new_directory} | {accuracy:.2f} | {trial}\n'
+
+                coolwarm_cmap = LinearSegmentedColormap.from_list('CoolWarm', ['blue', 'yellow', 'black'])
+
+                # Visualize the results
+                axs[1].scatter(x, y, c=y_kmeans, cmap=coolwarm_cmap)
+                centers = kmeans.cluster_centers_
+                print(centers)
+                print(centers.shape)
+                axs[1].scatter(centers[:, 0], centers[:, 0], marker='X', s=200, color='red')
+
+                axs[1].set_title('K-Means Clustering')
                 axs[1].set_xlabel(f'experiment')  # Add X axis label
                 axs[1].set_ylabel(f'accelerometer - {functions[i]}')  # Add Y axis label
                 classes = ['1', '2', '3']
 
                 # Create a custom legend
                 legend_elements2 = [Line2D([0], [0], marker='o', color='w', label=f'Class {classes[i]}',
-                                            markerfacecolor=['red', 'brown', 'black'][i], markersize=10) for i in range(3)]
+                                            markerfacecolor=coolwarm_cmap(i / (len(classes) - 1)), markersize=10) for i in range(2)]
 
                 # Add legend to the second subplot
-                axs[1].legend(handles=legend_elements2, loc='best')
+                axs[1].legend(handles=legend_elements2, loc='upper right')
 
                 # Set a global title for the entire figure
-                fig.suptitle(f'Comparison of Actual Classes and SOM Predictions', fontsize=16)
+                fig.suptitle(f'Comparison of Actual Classes and K-Means Clustering', fontsize=16)
 
                 # Add a subtitle below the subplots
                 fig.text(0.5, 0.03, f'Acc: {accuracy:.2f} %', ha='center', fontsize=8)
@@ -228,10 +247,10 @@ if __name__ == '__main__':
                 # Adjust layout for better spacing
                 plt.tight_layout()
 
-                with open('./Results_Dataset11/results.txt', 'a') as f:
+                with open('./Results_Dataset11/KMEANS/results.txt', 'a') as f:
                     f.write(vector_info)
 
                 # Save the figure
-                plt.savefig(f'./Results_Dataset11/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
+                plt.savefig(f'./Results_Dataset11/KMEANS/{new_directory}/image_{new_directory}_fig{i}_trial_{trial}_plot_{functions[i]}.png')
 
 
